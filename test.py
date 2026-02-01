@@ -1,0 +1,5 @@
+print("Hello, Im testing this as a free Host")
+Profile=("My Home")
+print(Profile)
+Name=input("Name? ")
+print(Name +", Is that you?")
