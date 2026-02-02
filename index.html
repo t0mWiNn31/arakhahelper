@@ -1,97 +1,109 @@
+t0mWiNn31 ♈, [02/02/2026 13:57]
 <!DOCTYPE html>
 <html lang="my">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>First Arakha - Login</title>
+    <title>First Arakha Chat</title>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     
     <style>
-        body { font-family: 'Pyidaungsu', sans-serif; background: #eef2f7; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-card { background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 350px; text-align: center; border-top: 5px solid #0084ff; }
-        h2 { color: #333; margin-bottom: 1rem; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; outline: none; transition: 0.3s; }
-        input:focus { border-color: #0084ff; box-shadow: 0 0 5px rgba(0,132,255,0.2); }
-        button { width: 100%; padding: 12px; background: #0084ff; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 15px; font-size: 1rem; }
-        button:hover { background: #0066cc; transform: translateY(-2px); }
-        .toggle-text { margin-top: 20px; font-size: 0.9rem; color: #0084ff; cursor: pointer; text-decoration: underline; }
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 350px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #0084ff; border: none; border-radius: 8px; color: white; cursor: pointer; }
+        #messages { height: 250px; overflow-y: auto; border: 1px solid #eee; padding: 10px; margin-bottom: 10px; background: #fafafa; }
+        .msg { margin-bottom: 8px; padding: 5px; border-radius: 5px; background: #e4e6eb; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div class="login-card">
-    <h2 id="title">အကောင့်ဝင်ပါ</h2>
-    <input type="email" id="email" placeholder="အီးမေးလ် ရိုက်ထည့်ပါ">
-    <input type="password" id="password" placeholder="လျှို့ဝှက်နံပါတ်">
-    <button id="mainBtn" onclick="handleAuth()">အကောင့်ဝင်မည်</button>
-    <p class="toggle-text" id="toggleBtn" onclick="toggleMode()">အကောင့်အသစ်ဖွင့်ရန်</p>
+<div class="container">
+    <div id="login-section">
+        <h2 id="title">အကောင့်ဝင်ပါ</h2>
+        <input type="email" id="email" placeholder="အီးမေးလ်">
+        <input type="password" id="password" placeholder="လျှို့ဝှက်နံပါတ်">
+        <button id="mainBtn" onclick="handleAuth()">အကောင့်ဝင်မည်</button>
+        <p onclick="toggleMode()" style="color:blue; cursor:pointer; font-size:12px; margin-top:10px;">အကောင့်အသစ်ဖွင့်ရန် နှိပ်ပါ</p>
+    </div>
+
+    <div id="chat-section" style="display:none;">
+        <h2>စကားပြောခန်း</h2>
+        <div id="messages"></div>
+        <input type="text" id="msgInput" placeholder="စာရိုက်ပါ...">
+        <button onclick="sendMessage()">ပို့မည်</button>
+        <button onclick="auth.signOut()" style="background:gray; margin-top:5px;">ထွက်မည်</button>
+    </div>
 </div>
 
 <script>
-    // ၁။ Firebase Config (ကိုကို့ API Key တွေ ဒီမှာရှိရမယ်)
+    // ကိုကို့ရဲ့ Config
     const firebaseConfig = {
         apiKey: "AIzaSyCpIv3avDNRYNrmrzKdMqfnMdNzBGZAPow",
         authDomain: "firstarakha.firebaseapp.com",
         projectId: "firstarakha",
         storageBucket: "firstarakha.firebasestorage.app",
         messagingSenderId: "4263070909",
-        appId: "1:4263070909:web:ef4e4a2c0891be1f49bbd4",
-        measurementId: "G-G33FGT86DN"
+        appId: "1:4263070909:web:ef4e4a2c0891be1f49bbd4"
     };
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const db = firebase.database(); // Database ချိတ်တာ ဒီမှာ (နံပါတ် ၁)
+    const db = firebase.database();
 
     let isLogin = true;
-
-    // အကောင့်ဝင်/ဖွင့် လုပ်တဲ့ Function
-    function handleAuth() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-
-        if (isLogin) {
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    document.querySelector('.login-card').style.display = 'none'; // Login Form ဖျောက်မယ်
-                    document.getElementById('chat-section').style.display = 'block'; // Chat Box ပြမယ်
-                })
-                .catch((error) => alert(error.message));
-        } else {
-            auth.createUserWithEmailAndPassword(email, password)
-                .then(() => alert("အကောင့်ဖွင့်ပြီးပါပြီ! အခု အကောင့်ဝင်လိုက်ပါ ကိုကို။"))
-                .catch((error) => alert(error.message));
-        }
-    }
-
-    // နံပါတ် ၂ - စာပို့တဲ့ Function
-    function sendPrivateMessage() {
-        const user = auth.currentUser;
-        const msgInput = document.getElementById('msgInput');
-        
-        if (user && msgInput.value !== "") {
-            db.ref("messages").push({
-                email: user.email,
-                text: msgInput.value,
-                timestamp: Date.now()
-            });
-            msgInput.value = "";
-        }
-    }
-
-    // နံပါတ် ၃ - စာတွေကို နားထောင်ပြီး ပြပေးတဲ့ Function
-    db.ref("messages").on("child_added", (snapshot) => {
-        const data = snapshot.val();
-        const messageDiv = document.getElementById('messages');
-        messageDiv.innerHTML += <div><strong>${data.email.split('@')[0]}:</strong> ${data.text}</div>;
-        messageDiv.scrollTop = messageDiv.scrollHeight;
-    });
 
     function toggleMode() {
         isLogin = !isLogin;
         document.getElementById('title').innerText = isLogin ? "အကောင့်ဝင်ပါ" : "အကောင့်အသစ်ဖွင့်ပါ";
         document.getElementById('mainBtn').innerText = isLogin ? "အကောင့်ဝင်မည်" : "စာရင်းသွင်းမည်";
+    }
+
+    // အကောင့်ဝင်/ထွက် စောင့်ကြည့်ပေးမယ်
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('chat-section').style.display = 'block';
+            loadMessages(); // စာတွေ ဆွဲထုတ်မယ်
+        } else {
+            document.getElementById('login-section').style.display = 'block';
+            document.getElementById('chat-section').style.display = 'none';
+        }
+    });
+
+    function handleAuth() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        if (isLogin) {
+            auth.signInWithEmailAndPassword(email, password).catch(e => alert(e.message));
+        } else {
+            auth.createUserWithEmailAndPassword(email, password).catch(e => alert(e.message));
+        }
+    }
+
+    function sendMessage() {
+
+t0mWiNn31 ♈, [02/02/2026 13:57]
+const msg = document.getElementById('msgInput').value;
+        if (msg) {
+            db.ref("messages").push({
+                user: auth.currentUser.email,
+                text: msg,
+                time: Date.now()
+            });
+            document.getElementById('msgInput').value = "";
+        }
+    }
+
+    function loadMessages() {
+        db.ref("messages").limitToLast(20).on("child_added", snap => {
+            const data = snap.val();
+            const msgBox = document.getElementById('messages');
+            msgBox.innerHTML += <div class="msg"><b>${data.user.split('@')[0]}</b>: ${data.text}</div>;
+            msgBox.scrollTop = msgBox.scrollHeight;
+        });
     }
 </script>
 
