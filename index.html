@@ -1,47 +1,40 @@
-
 <!DOCTYPE html>
-<html lang="my">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arakha Chat</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 320px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #0084ff; border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; }
-        #messages { height: 250px; overflow-y: auto; border: 1px solid #eee; padding: 10px; margin-bottom: 10px; background: #fafafa; text-align: left; border-radius: 8px; }
-        .msg { margin-bottom: 8px; padding: 8px; border-radius: 8px; background: #e4e6eb; font-size: 14px; }
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background: #f0f2f5; }
+        .box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 300px; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #0084ff; color: white; border: none; cursor: pointer; margin-top: 5px; }
+        #messages { height: 200px; overflow-y: auto; border: 1px solid #ddd; margin-bottom: 10px; text-align: left; padding: 5px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div id="login-section">
-        <h2>အကောင့်ဝင်ပါ</h2>
+<div class="box">
+    <div id="login-div">
+        <h3>အကောင့်ဝင်ပါ</h3>
         <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Password">
-        <button id="authBtn">ဝင်မည် / ဖွင့်မည်</button>
-        <p id="toggleBtn" style="color:#0084ff; cursor:pointer; font-size:12px; margin-top:10px;">အကောင့်အသစ်ဖွင့်ရန် ပြောင်းပါ</p>
+        <input type="password" id="pass" placeholder="Password">
+        <button onclick="doAuth()">ဝင်မည် / ဖွင့်မည်</button>
     </div>
 
-    <div id="chat-section" style="display:none;">
-        <h3 style="color:#0084ff;">Chat Room ✅</h3>
+    <div id="chat-div" style="display:none;">
+        <h3>Chat Room ✅</h3>
         <div id="messages"></div>
-        <div style="display: flex; gap: 5px;">
-            <input type="text" id="msgInput" placeholder="စာရိုက်ပါ..." style="margin:0;">
-            <button id="sendBtn" style="width: 60px;">ပို့</button>
-        </div>
-        <button id="logoutBtn" style="background:#ff4444; margin-top:10px; font-size: 11px;">Logout</button>
+        <input type="text" id="msg" placeholder="စာရိုက်ပါ">
+        <button onclick="send()">ပို့မည်</button>
+        <button onclick="firebase.auth().signOut()" style="background:gray;">Logout</button>
     </div>
 </div>
 
 <script>
-    const firebaseConfig = {
+    const config = {
         apiKey: "AIzaSyCpIv3avDNRYNrmrzKdMqfnMdNzBGZAPow",
         authDomain: "firstarakha.firebaseapp.com",
         projectId: "firstarakha",
@@ -49,58 +42,37 @@
         messagingSenderId: "4263070909",
         appId: "1:4263070909:web:ef4e4a2c0891be1f49bbd4"
     };
-
-    firebase.initializeApp(firebaseConfig);
+    firebase.initializeApp(config);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    let isLoginMode = true;
-
-    document.getElementById('toggleBtn').onclick = () => {
-        isLoginMode = !isLoginMode;
-        document.querySelector('h2').innerText = isLoginMode ? "အကောင့်ဝင်ပါ" : "အကောင့်အသစ်ဖွင့်ပါ";
-        document.getElementById('toggleBtn').innerText = isLoginMode ? "အကောင့်အသစ်ဖွင့်ရန် ပြောင်းပါ" : "အကောင့်ရှိပြီးသားလား? ဝင်မည်";
-    };
-
-    document.getElementById('authBtn').onclick = () => {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        if (isLoginMode) {
-            auth.signInWithEmailAndPassword(email, password).catch(e => alert(e.message));
-        } else {
-            auth.createUserWithEmailAndPassword(email, password).catch(e => alert(e.message));
-        }
-    };
-
-    auth.onAuthStateChanged(user => {
-        document.getElementById('login-section').style.display = user ? 'none' : 'block';
-        document.getElementById('chat-section').style.display = user ? 'block' : 'none';
-        if (user) loadMessages();
-    });
-
-    document.getElementById('sendBtn').onclick = () => {
-
-const msg = document.getElementById('msgInput').value;
-        if (msg) {
-            db.ref("global_messages").push({
-                sender: auth.currentUser.email.split('@')[0],
-                text: msg
-            });
-            document.getElementById('msgInput').value = "";
-        }
-    };
-
-    document.getElementById('logoutBtn').onclick = () => auth.signOut();
-
-    function loadMessages() {
-        const msgBox = document.getElementById('messages');
-        msgBox.innerHTML = "";
-        db.ref("global_messages").limitToLast(20).on("child_added", snap => {
-            const data = snap.val();
-            msgBox.innerHTML += <div class="msg"><b>${data.sender}</b>: ${data.text}</div>;
-            msgBox.scrollTop = msgBox.scrollHeight;
+    function doAuth() {
+        const e = document.getElementById('email').value;
+        const p = document.getElementById('pass').value;
+        auth.signInWithEmailAndPassword(e, p).catch(() => {
+            auth.createUserWithEmailAndPassword(e, p).catch(err => alert(err.message));
         });
     }
+
+    auth.onAuthStateChanged(user => {
+        document.getElementById('login-div').style.display = user ? 'none' : 'block';
+        document.getElementById('chat-div').style.display = user ? 'block' : 'none';
+        if(user) {
+            db.ref("chats").on("child_added", snap => {
+                const data = snap.val();
+                document.getElementById('messages').innerHTML += <div><b>${data.user}:</b> ${data.text}</div>;
+            });
+        }
+    });
+
+    function send() {
+        const txt = document.getElementById('msg').value;
+        if(txt) {
+            db.ref("chats").push({ user: auth.currentUser.email.split('@')[0], text: txt });
+            document.getElementById('msg').value = "";
+        }
+    }
 </script>
+
 </body>
 </html>
