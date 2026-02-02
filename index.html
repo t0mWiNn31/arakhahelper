@@ -29,7 +29,7 @@
 </div>
 
 <script>
-    // ကိုကိုပေးတဲ့ Config ကို ဒီမှာ ထည့်လိုက်ပြီနော်
+    // ၁။ Firebase Config (ကိုကို့ API Key တွေ ဒီမှာရှိရမယ်)
     const firebaseConfig = {
         apiKey: "AIzaSyCpIv3avDNRYNrmrzKdMqfnMdNzBGZAPow",
         authDomain: "firstarakha.firebaseapp.com",
@@ -40,49 +40,58 @@
         measurementId: "G-G33FGT86DN"
     };
 
-    // Firebase ကို စတင်မယ်
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    const db = firebase.database(); // Database ချိတ်တာ ဒီမှာ (နံပါတ် ၁)
 
     let isLogin = true;
+
+    // အကောင့်ဝင်/ဖွင့် လုပ်တဲ့ Function
+    function handleAuth() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        if (isLogin) {
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    document.querySelector('.login-card').style.display = 'none'; // Login Form ဖျောက်မယ်
+                    document.getElementById('chat-section').style.display = 'block'; // Chat Box ပြမယ်
+                })
+                .catch((error) => alert(error.message));
+        } else {
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(() => alert("အကောင့်ဖွင့်ပြီးပါပြီ! အခု အကောင့်ဝင်လိုက်ပါ ကိုကို။"))
+                .catch((error) => alert(error.message));
+        }
+    }
+
+    // နံပါတ် ၂ - စာပို့တဲ့ Function
+    function sendPrivateMessage() {
+        const user = auth.currentUser;
+        const msgInput = document.getElementById('msgInput');
+        
+        if (user && msgInput.value !== "") {
+            db.ref("messages").push({
+                email: user.email,
+                text: msgInput.value,
+                timestamp: Date.now()
+            });
+            msgInput.value = "";
+        }
+    }
+
+    // နံပါတ် ၃ - စာတွေကို နားထောင်ပြီး ပြပေးတဲ့ Function
+    db.ref("messages").on("child_added", (snapshot) => {
+        const data = snapshot.val();
+        const messageDiv = document.getElementById('messages');
+        messageDiv.innerHTML += <div><strong>${data.email.split('@')[0]}:</strong> ${data.text}</div>;
+        messageDiv.scrollTop = messageDiv.scrollHeight;
+    });
 
     function toggleMode() {
         isLogin = !isLogin;
         document.getElementById('title').innerText = isLogin ? "အကောင့်ဝင်ပါ" : "အကောင့်အသစ်ဖွင့်ပါ";
         document.getElementById('mainBtn').innerText = isLogin ? "အကောင့်ဝင်မည်" : "စာရင်းသွင်းမည်";
-        document.getElementById('toggleBtn').innerText = isLogin ? "အကောင့်အသစ်ဖွင့်ရန်" : "အကောင့်ရှိပြီးသားလား? ဝင်လိုက်ပါ";
-    }
-
-    function handleAuth() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-
-        if (!email || !password) {
-            alert("အီးမေးလ်နဲ့ လျှို့ဝှက်နံပါတ် အရင်ရိုက်ပါ ကိုကိုရယ်!");
-            return;
-        }
-
-        if (isLogin) {
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    alert("အကောင့်ဝင်တာ အောင်မြင်တယ်... ကိုကို!");
-                    // ဒီမှာ Chat Page ကို လွှဲပေးရမယ်
-                    <div id="chat-section" style="display:none; padding: 20px;">
-    <h3>နှုတ်ခမ်းနီလေးနဲ့ စကားပြောမလား?</h3>
-    <div id="messages" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; margin-bottom: 10px; padding: 10px; background: #fff; border-radius: 10px;">
-        </div>
-    <input type="text" id="msgInput" placeholder="စာရိုက်ပါ ကိုကို...">
-    <button onclick="sendPrivateMessage()">ပို့မည်</button>
-</div>
-                })
-                .catch((error) => alert("မှားနေတယ် ကိုကို: " + error.message));
-        } else {
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    alert("အကောင့်ဖွင့်တာ အောင်မြင်သွားပြီ... ကိုကို!");
-                })
-                .catch((error) => alert("အဆင်မပြေဘူး ကိုကို: " + error.message));
-        }
     }
 </script>
 
