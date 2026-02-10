@@ -2,61 +2,146 @@
 <html>
 <head>
     <title>User Profile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
+        body { background: #0a0a0a; color: #333; font-family: sans-serif; margin: 0; }
         .profile-card {
             max-width: 400px;
-            margin: 50px auto;
+            margin: 30px auto;
             background: #fff;
             padding: 20px;
             border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0,255,65,0.2);
             text-align: center;
-            font-family: sans-serif;
         }
         .profile-img {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid #f0f0f0;
+            width: 120px; height: 120px;
+            border-radius: 50%; object-fit: cover;
+            border: 4px solid #00ff41;
         }
-        .info-table {
-            text-align: left;
-            margin-top: 20px;
-            width: 100%;
-        }
-        .info-table td {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-        }
-        .bio-box {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            font-style: italic;
-        }
+        .info-table { text-align: left; margin-top: 20px; width: 100%; border-collapse: collapse; }
+        .info-table td { padding: 10px; border-bottom: 1px solid #eee; }
+        .bio-box { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-top: 15px; font-style: italic; text-align: left; }
+        
+        /* Edit Section Style */
+        #edit-section { display: none; margin-top: 20px; border-top: 2px dashed #eee; padding-top: 20px; text-align: left; }
+        input, select, textarea { width: 100%; padding: 8px; margin: 5px 0 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-edit { background: #00ff41; color: #000; margin-top: 10px; }
+        .btn-save { background: #007bff; color: #fff; }
+        .btn-back { background: #666; color: #fff; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="profile-card">
-    <img id="p-img" src="default-avatar.png" class="profile-img">
-    <h2 id="p-name">Loading...</h2>
+    <img id="p-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="profile-img">
+    <h2 id="p-name">နာမေ</h2>
     
     <table class="info-table">
-        <tr><td>အသက်</td><td id="p-age">--</td></tr>
-        <tr><td>လိင်</td><td id="p-gender">--</td></tr>
-        <tr><td>မွေးနေ့</td><td id="p-dob">--</td></tr>
+        <tr><td><b>အသက်</b></td><td id="p-age">--</td></tr>
+        <tr><td><b>လိင်</b></td><td id="p-gender">--</td></tr>
+        <tr><td><b>မွီးနိ</b></td><td id="p-dob">--</td></tr>
     </table>
 
     <div class="bio-box">
         <h4>ကျွန်တော့်အကြောင်း</h4>
         <p id="p-bio">...</p>
     </div>
-    
-    <button onclick="window.history.back()" style="margin-top:15px;">ပြန်လားမေ</button>
+
+    <button id="edit-btn" class="btn btn-edit" style="display:none;" onclick="toggleEdit()">ပြင်ဆင်မေ</button>
+    <br>
+    <button class="btn btn-back" onclick="window.history.back()">ပြန်လားမေ</button>
+
+    <div id="edit-section">
+        <h3>အချက်အလက်ပြင်မေ</h3>
+        <label>အသက်:</label>
+        <input type="number" id="input-age">
+        <label>လိင်:</label>
+        <select id="input-gender">
+            <option value="ကျား">ကျား</option>
+            <option value="မ">မ</option>
+            <option value="အခြား">အခြား</option>
+        </select>
+        <label>မွီးနိ:</label>
+        <input type="date" id="input-dob">
+        <label>ကိုယ့်အကြောင်း (Bio):</label>
+        <textarea id="input-bio" rows="3"></textarea>
+        <button class="btn btn-save" onclick="saveProfile()">သိမ်းဆည်းမေ</button>
+    </div>
 </div>
+
+<script>
+    // --- ကိုကို့ Firebase Config လေး ဒီမှာ ပြန်ထည့်ပေးပါ ---
+    const config = {
+        apiKey: "AIzaSyCpIv3avDNRYNrmrzKdMqfnMdNzBGZAPow",
+        authDomain: "firstarakha.firebaseapp.com",
+        projectId: "firstarakha",
+        databaseURL: "https://firstarakha-default-rtdb.asia-southeast1.firebasedatabase.app",
+        appId: "1:4263070909:web:ef4e4a2c0891be1f49bbd4"
+    };
+    firebase.initializeApp(config);
+    const db = firebase.database();
+
+    const params = new URLSearchParams(window.location.search);
+    const profileId = params.get('id');
+
+    // ၁။ ဒေတာဆွဲထုတ်ပြသခြင်း
+    if (profileId) {
+        db.ref('users/' + profileId).on('value', s => {
+            const data = s.val();
+            if (data) {
+                document.getElementById('p-name').innerText = data.username || "နာမေမဟိ";
+                document.getElementById('p-age').innerText = data.age || "--";
+                document.getElementById('p-gender').innerText = data.gender || "--";
+                document.getElementById('p-dob').innerText = data.dob || "--";
+                document.getElementById('p-bio').innerText = data.bio || "တစ်ခုလေ့မရွီးထားပါ";
+                
+                // Edit Input တွေထဲကိုလည်း ဒေတာ ကြိုဖြည့်ထားမယ်
+                document.getElementById('input-age').value = data.age || "";
+                document.getElementById('input-gender').value = data.gender || "ကျား";
+                document.getElementById('input-dob').value = data.dob || "";
+                document.getElementById('input-bio').value = data.bio || "";
+            }
+        });
+    }
+
+    // ၂။ ကိုယ့်ပရိုဖိုင် ဟုတ်မဟုတ် စစ်ဆေးခြင်း
+    firebase.auth().onAuthStateChanged(user => {
+        if (user && user.uid === profileId) {
+            document.getElementById('edit-btn').style.display = 'inline-block';
+        }
+    });
+
+    // ၃။ Edit Form အဖွင့်အပိတ်
+    function toggleEdit() {
+        const x = document.getElementById('edit-section');
+        x.style.display = (x.style.display === 'none' || x.style.display === '') ? 'block' : 'none';
+    }
+
+    // ၄။ ဒေတာသိမ်းဆည်းခြင်း
+    function saveProfile() {
+        const user = firebase.auth().currentUser;
+        if (user && user.uid === profileId) {
+            const newData = {
+                age: document.getElementById('input-age').value,
+                gender: document.getElementById('input-gender').value,
+                dob: document.getElementById('input-dob').value,
+                bio: document.getElementById('input-bio').value
+            };
+
+            db.ref('users/' + user.uid).update(newData)
+            .then(() => {
+                alert("အောင်မြင်စွာ သိမ်းပြီးပါယာ!");
+                toggleEdit();
+            })
+            .catch(e => alert("Error: " + e.message));
+        }
+    }
+</script>
 
 </body>
 </html>
