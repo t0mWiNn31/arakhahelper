@@ -8,47 +8,89 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
-        body { background: #0a0a0a; color: #ccc; font-family: sans-serif; margin: 0; }
-        .nav { background: #111; padding: 10px 15px; border-bottom: 1px solid #00ff41; position: sticky; top: 0; z-index: 100; }
+        /* Matrix Background */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        body { background: #000; color: #ccc; font-family: sans-serif; margin: 0; overflow-x: hidden; }
+        
+        .nav { 
+            background: rgba(17, 17, 17, 0.9); 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 10px 15px; 
+            border-bottom: 1px solid #00ff41; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+        }
         .nav-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .nav-tabs { display: flex; gap: 20px; border-top: 1px solid #222; padding-top: 8px; }
         .tab { font-size: 13px; color: #888; cursor: pointer; padding: 5px 0; border-bottom: 2px solid transparent; }
         .tab.active { color: #00ff41; border-bottom: 2px solid #00ff41; }
-        .container { max-width: 700px; margin: 20px auto; padding: 10px; }
-        .post-input { background: #111; padding: 20px; border: 1px solid #333; margin-bottom: 20px; border-radius: 8px; }
-        input, textarea { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 12px; margin-top: 10px; outline: none; box-sizing: border-box; }
+
+        .container { max-width: 700px; margin: 20px auto; padding: 10px; position: relative; z-index: 1; }
+        
+        .post-input { 
+            background: rgba(17, 17, 17, 0.85); 
+            padding: 20px; 
+            border: 1px solid #00ff41; 
+            margin-bottom: 20px; 
+            border-radius: 8px; 
+            backdrop-filter: blur(5px);
+        }
+        input, textarea { width: 100%; background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 12px; margin-top: 10px; outline: none; box-sizing: border-box; }
+        
         button { background: #00ff41; color: #000; border: none; padding: 10px 15px; cursor: pointer; font-weight: bold; margin-top: 10px; border-radius: 4px; }
-        .card { background: #161616; padding: 20px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #222; }
-        .user a { color: #00ff41; font-weight: bold; font-size: 12px; text-decoration: none; }
-        .user a:hover { text-decoration: underline; }
-        .title { font-size: 18px; color: #fff; margin: 10px 0; }
+        
+        .card { 
+            background: rgba(22, 22, 22, 0.9); 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-bottom: 15px; 
+            border: 1px solid #00ff41; 
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.1);
+            backdrop-filter: blur(5px);
+        }
+        .user { display: flex; align-items: center; gap: 10px; }
+        .user a { color: #00ff41; font-weight: bold; font-size: 15px; text-decoration: none; }
+        .avatar { font-size: 25px; background: #000; border-radius: 50%; width: 40px; height: 40px; border: 1px solid #00ff41; display: flex; align-items: center; justify-content: center; }
+        
+        .title { font-size: 18px; color: #fff; margin: 10px 0; text-shadow: 0 0 5px #00ff41; }
         .action-bar { border-top: 1px solid #222; margin-top: 15px; padding-top: 10px; display: flex; gap: 20px; font-size: 13px; }
         .like-btn { cursor: pointer; color: #00ff41; }
-        .reply-box { margin-top: 10px; padding-left: 15px; border-left: 2px solid #333; }
-        .ai-box { background: rgba(0, 255, 65, 0.05); border: 1px dashed #00ff41; padding: 12px; margin-top: 15px; font-size: 13px; border-radius: 4px; line-height: 1.6; }
+        .reply-box { margin-top: 10px; padding-left: 15px; border-left: 2px solid #00ff41; }
+        .ai-box { background: rgba(0, 255, 65, 0.1); border: 1px dashed #00ff41; padding: 12px; margin-top: 15px; font-size: 13px; border-radius: 4px; color: #00ff41; }
     </style>
 </head>
 <body>
 
+<canvas id="matrix-canvas"></canvas>
+
 <div class="nav">
     <div class="nav-top">
         <div>
-            <b style="color:#00ff41">ARAKHA_KNOWLEDGE_FORUM</b>
-            <div style="font-size: 10px; color: #666;">ONLINE: <span id="online-count">0</span> | TOTAL: <span id="total-count">0</span></div>
+            <b style="color:#00ff41; text-shadow: 0 0 10px #00ff41;">ARAKHA_KNOWLEDGE_FORUM</b>
+            <div style="font-size: 10px; color: #00ff41;">ONLINE: <span id="online-count">0</span> | TOTAL: <span id="total-count">0</span></div>
         </div>
         <div id="user-display" style="font-size: 12px; color: #00ff41;"></div>
         <button onclick="logout()" style="background:#ff4444; color:#fff; padding:5px 10px; margin:0; font-size: 11px;">LOGOUT</button>
     </div>
     <div class="nav-tabs">
         <div class="tab active" id="tab-latest" onclick="switchTab('latest')">နောက်ဆုံးတင်ခစာ</div>
-        <div class="tab" id="tab-popular" onclick="switchTab('popular')">အူး..နာမည်ကြီး (Popular)</div>
+        <div class="tab" id="tab-popular" onclick="switchTab('popular')">နာမည်ကြီး (Popular)</div>
     </div>
 </div>
 
 <div class="container">
     <div class="post-input">
-        <h3 style="margin:0; color:#00ff41">ရက္ခိုင်သားအချင်းချင်း ပွင့်ပွင့်လင်းလင်းဆွေးနွေးကတ်မေ</h3>
-        <h5 style="margin:0; color:#00ff41">လိုအပ်ချက်တိဟိကေလည်း ပို့စ်တင်ပခပါ</h5>
+        <h3 style="margin:0; color:#00ff41">ရက္ခိုင်သားအချင်းချင်း ဆွေးနွေးကတ်မေ</h3>
         <input type="text" id="t" placeholder="ဂေါင်းစိုင်">
         <textarea id="c" rows="3" placeholder="အကြောင်းအရာ..."></textarea>
         <button id="post-btn" onclick="post()">POST တင်မေ</button>
@@ -57,6 +99,33 @@
 </div>
 
 <script>
+    // --- Matrix Animation ---
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const matrixText = "ARAKHA010101";
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
+    const drops = [];
+    for (let i = 0; i < columns; i++) drops[i] = 1;
+
+    function drawMatrix() {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#00ff41";
+        ctx.font = fontSize + "px monospace";
+        for (let i = 0; i < drops.length; i++) {
+            const char = matrixText.charAt(Math.floor(Math.random() * matrixText.length));
+            ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+    }
+    setInterval(drawMatrix, 50);
+
+    // --- Firebase Logic ---
     const config = {
         apiKey: "AIzaSyCpIv3avDNRYNrmrzKdMqfnMdNzBGZAPow",
         authDomain: "firstarakha.firebaseapp.com",
@@ -66,49 +135,44 @@
     };
     firebase.initializeApp(config);
     const db = firebase.database();
+
     let currentUsername = "";
+    let currentUserAvatar = "👤";
     let currentTab = 'latest';
 
-    async function askGemini(question) {
-        try {
-            const res = await fetch("/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: "မင်းနာမည်က ဗျာလ် (Byal) ဖြစ်တယ်။ ရက္ခိုင်နည်းပညာ AI အနေနဲ့ တိုတိုနဲ့ လိုရင်းဖြေပေးပါ။ မေးခွန်း - " + question })
+    firebase.auth().onAuthStateChanged(user => {
+        if (!user) window.location.href = "index.html";
+        else {
+            db.ref('users/' + user.uid).on('value', s => {
+                const data = s.val();
+                currentUsername = data ? data.username : user.email.split('@')[0];
+                currentUserAvatar = data ? data.profilePic : "👤";
+                document.getElementById('user-display').innerText = "အသုံးပြုသူ - " + currentUsername;
+                trackPresence(user);
+                load();
             });
-            const data = await res.json();
-            return data.reply; 
-        } catch (e) { 
-            console.error("AI Error:", e);
-            return "ဗျာလ် အနားယူနီပါရေ (Backend နဲ့ ချိတ်လို့မရပါ)"; 
         }
-    }
+    });
 
     async function post() {
         const t = document.getElementById('t').value, c = document.getElementById('c').value;
-        const user = firebase.auth().currentUser; // User ID ယူရန်
-
+        const user = firebase.auth().currentUser;
         if(t && c && user) {
-            const btn = document.getElementById('post-btn');
-            btn.innerText = "ဗျာလ် စဉ်းစားနီပါရေ..."; 
-            btn.disabled = true;
-
-            const aiResponse = await askGemini(c); 
-            
             db.ref("posts").push({ 
-                u: currentUsername, 
-                uid: user.uid, // Profile Link အတွက် ID သိမ်းလိုက်ပြီ
-                t: t, 
-                c: c, 
-                ai: aiResponse, 
-                time: Date.now(), 
-                likes: 0 
+                u: currentUsername, uid: user.uid, avatar: currentUserAvatar,
+                t: t, c: c, ai: "ဗျာလ် စဉ်းစားနီပါရေ...", time: Date.now(), likes: 0 
             });
+            document.getElementById('t').value = ""; document.getElementById('c').value = "";
+        }
+    }
 
-            document.getElementById('t').value = ""; 
-            document.getElementById('c').value = "";
-            btn.innerText = "POST တင်မေ"; 
-            btn.disabled = false;
+    function reply(id) {
+        const rText = prompt("ပြောကြည့်ဇမ် -");
+        const user = firebase.auth().currentUser;
+        if(rText && user) {
+            db.ref("posts/" + id + "/replies").push({ 
+                u: currentUsername, uid: user.uid, avatar: currentUserAvatar, m: rText 
+            });
         }
     }
 
@@ -116,20 +180,10 @@
         db.ref("posts/" + id + "/likes").transaction(c => (c || 0) + 1);
     }
 
-    function reply(id) {
-        const rText = prompt("ပြောကြည့်ဇမ် -");
-        if(rText) {
-            db.ref("posts/" + id + "/replies").push({ u: currentUsername, m: rText });
-        }
-    }
-
     function load() {
         db.ref("posts").on("value", s => {
-            const feed = document.getElementById('feed');
-            feed.innerHTML = "";
-            let items = [];
-            s.forEach(child => { items.push({ key: child.key, ...child.val() }); });
-
+            const feed = document.getElementById('feed'); feed.innerHTML = "";
+            let items = []; s.forEach(child => { items.push({ key: child.key, ...child.val() }); });
             if (currentTab === 'latest') items.reverse();
             else items.sort((a, b) => (b.likes || 0) - (a.likes || 0));
 
@@ -137,44 +191,24 @@
                 let repliesHTML = "";
                 if(p.replies) {
                     Object.values(p.replies).forEach(r => {
-                        repliesHTML += `<div style="font-size:12px; margin-top:5px;"><b style="color:#00ff41">@${r.u}:</b> ${r.m}</div>`;
+                        repliesHTML += `<div style="font-size:12px; margin-top:8px; display:flex; align-items:center; gap:5px;"><span>${r.avatar||'👤'}</span> <a href="profile.html?id=${r.uid}" style="color:#00ff41; text-decoration:none; font-weight:bold;">@${r.u}:</a> <span>${r.m}</span></div>`;
                     });
                 }
-
                 const card = document.createElement('div');
                 card.className = "card";
                 card.innerHTML = `
-                    <div class="user"><a href="profile.html?id=${p.uid || ''}">@${p.u}</a></div>
-                    <div class="title">${p.t}</div>
-                    <p style="font-size:14px; color:#ccc;">${p.c}</p>
-                    <div class="ai-box"><b style="color:#00ff41">🤖 ဗျာလ် (Byal):</b><br>${p.ai || "စဉ်းစားနီတုန်း..."}</div>
-                    <div class="action-bar">
-                        <span class="like-btn" onclick="like('${p.key}')">❤️ Like (${p.likes || 0})</span>
-                        <span style="cursor:pointer; color:#888;" onclick="reply('${p.key}')">💬 Reply</span>
-                    </div>
-                    <div class="reply-box">${repliesHTML}</div>
-                `;
+                    <div class="user"><div class="avatar">${p.avatar||'👤'}</div><a href="profile.html?id=${p.uid}">@${p.u}</a></div>
+                    <div class="title">${p.t}</div><p>${p.c}</p>
+                    <div class="action-bar"><span class="like-btn" onclick="like('${p.key}')">❤️ Like (${p.likes||0})</span><span style="cursor:pointer; color:#888;" onclick="reply('${p.key}')">💬 Reply</span></div>
+                    <div class="reply-box">${repliesHTML}</div>`;
                 feed.appendChild(card);
             });
         });
     }
 
-    firebase.auth().onAuthStateChanged(user => {
-        if (!user) { window.location.href = "index.html"; } 
-        else {
-            db.ref('users/' + user.uid).once('value', s => {
-                currentUsername = s.val() ? s.val().username : user.email.split('@')[0];
-                document.getElementById('user-display').innerText = "အသုံးပြုသူ - " + currentUsername;
-                trackPresence(user); 
-                load();
-            });
-        }
-    });
-
     function trackPresence(user) {
         const onlineRef = db.ref('online/' + user.uid);
-        onlineRef.set(true); 
-        onlineRef.onDisconnect().remove();
+        onlineRef.set(true); onlineRef.onDisconnect().remove();
         db.ref('online').on('value', s => { document.getElementById('online-count').innerText = s.numChildren(); });
         db.ref('users').on('value', s => { document.getElementById('total-count').innerText = s.numChildren(); });
     }
@@ -187,7 +221,7 @@
     }
 
     function logout() { 
-        if (confirm("လားပါဖို့ယာလား?")) {
+        if (confirm("လားပါဖို့ယာလား? (အားခါလာလည်ပါ)")) {
             firebase.auth().signOut().then(() => window.location.href = "index.html");
         } 
     }
