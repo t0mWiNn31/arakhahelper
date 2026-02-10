@@ -7,19 +7,28 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
     <style>
         #matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
         body { background: #000; color: #ccc; font-family: sans-serif; margin: 0; overflow-x: hidden; }
+        
         .nav { background: rgba(17, 17, 17, 0.9); backdrop-filter: blur(10px); padding: 10px 15px; border-bottom: 1px solid #00ff41; position: sticky; top: 0; z-index: 100; }
-        .nav-top { display: flex; justify-content: space-between; align-items: center; }
+        .nav-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .nav-tabs { display: flex; gap: 20px; border-top: 1px solid #222; padding-top: 8px; }
+        .tab { font-size: 13px; color: #888; cursor: pointer; padding: 5px 0; border-bottom: 2px solid transparent; }
+        .tab.active { color: #00ff41; border-bottom: 2px solid #00ff41; }
+
         .container { max-width: 700px; margin: 20px auto; padding: 10px; position: relative; z-index: 1; }
         .post-input { background: rgba(17, 17, 17, 0.85); padding: 20px; border: 1px solid #00ff41; margin-bottom: 20px; border-radius: 8px; }
         input, textarea { width: 100%; background: #000; border: 1px solid #444; color: #00ff41; padding: 12px; margin-top: 10px; outline: none; box-sizing: border-box; }
         button { background: #00ff41; color: #000; border: none; padding: 10px 15px; cursor: pointer; font-weight: bold; margin-top: 10px; border-radius: 4px; }
-        .card { background: rgba(22, 22, 22, 0.9); padding: 20px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #222; }
+        
+        .card { background: rgba(22, 22, 22, 0.9); padding: 20px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #222; backdrop-filter: blur(5px); }
         .user { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .user a { color: #00ff41; font-weight: bold; font-size: 15px; text-decoration: none; }
         .avatar { font-size: 25px; background: #111; border-radius: 50%; width: 40px; height: 40px; border: 1px solid #333; display: flex; align-items: center; justify-content: center; }
-        .user a { color: #00ff41; font-weight: bold; text-decoration: none; }
+        .title { font-size: 18px; color: #fff; margin: 10px 0; font-weight: bold; }
+        .action-bar { border-top: 1px solid #222; margin-top: 15px; padding-top: 10px; display: flex; gap: 20px; font-size: 13px; }
         .reply-box { margin-top: 10px; padding-left: 15px; border-left: 2px solid #00ff41; font-size: 13px; }
     </style>
 </head>
@@ -29,23 +38,31 @@
 
 <div class="nav">
     <div class="nav-top">
-        <b style="color:#00ff41">ARAKHA_FORUM</b>
+        <div>
+            <b style="color:#00ff41">ARAKHA_KNOWLEDGE_FORUM</b>
+            <div style="font-size: 10px; color: #888;">ONLINE: <span id="online-count">0</span> | TOTAL: <span id="total-count">0</span></div>
+        </div>
         <div id="user-display" style="font-size: 12px; color: #00ff41;"></div>
-        <button onclick="logout()" style="background:#ff4444; color:#fff; padding:5px 10px; font-size: 10px;">LOGOUT</button>
+        <button onclick="logout()" style="background:#ff4444; color:#fff; padding:5px 10px; margin:0; font-size: 11px;">LOGOUT</button>
+    </div>
+    <div class="nav-tabs">
+        <div class="tab active" id="tab-latest" onclick="switchTab('latest')">နောက်ဆုံးတင်ခစာ</div>
+        <div class="tab" id="tab-popular" onclick="switchTab('popular')">နာမည်ကြီး (Popular)</div>
     </div>
 </div>
 
 <div class="container">
     <div class="post-input">
-        <input type="text" id="t" placeholder="ဂေါင်းစိုင်">
+        <h3 style="margin:0; color:#00ff41">ရက္ခိုင်သားအချင်းချင်း ဆွေးနွေးကတ်မေ</h3>
+        <input type="text" id="t" placeholder="ဂေါင်းစိုင် (Title)">
         <textarea id="c" rows="3" placeholder="အကြောင်းအရာ..."></textarea>
-        <button id="post-btn" onclick="post()">POST တင်မေ</button>
+        <button onclick="post()">POST တင်မေ</button>
     </div>
     <div id="feed"></div>
 </div>
 
 <script>
-    // --- Matrix Animation (Optimized) ---
+    // --- Matrix Animation ---
     const canvas = document.getElementById('matrix-canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -79,84 +96,110 @@
     firebase.initializeApp(config);
     const db = firebase.database();
 
-    let userDataCache = {}; // User data တွေကို ဒီထဲမှာ သိမ်းထားမယ်
+    let currentUsername = "";
+    let currentUserAvatar = "👤";
+    let currentTab = 'latest';
 
-    // ၁။ User data အားလုံးကို အရင်ယူထားမယ်
-    db.ref('users').on('value', snap => {
-        userDataCache = snap.val() || {};
-        renderFeed(); // User data ပြောင်းတိုင်း Feed ကို ပြန်ပြမယ်
+    firebase.auth().onAuthStateChanged(user => {
+        if (!user) window.location.href = "index.html";
+        else {
+            db.ref('users/' + user.uid).on('value', s => {
+                const data = s.val() || {};
+                currentUsername = data.username || user.email.split('@')[0];
+                currentUserAvatar = data.profilePic || "👤";
+                document.getElementById('user-display').innerText = "အသုံးပြုသူ - " + currentUsername;
+                trackPresence(user);
+                load();
+            });
+        }
     });
-
-    let postsData = [];
-    // ၂။ Post data တွေကို ယူမယ်
-    db.ref('posts').on('value', snap => {
-        postsData = [];
-        snap.forEach(child => { postsData.push({ key: child.key, ...child.val() }); });
-        postsData.reverse(); 
-        renderFeed();
-    });
-
-    // ၃။ Feed ကို ထုတ်ပြတဲ့ Function (အမြန်ဆုံး)
-    function renderFeed() {
-        const feed = document.getElementById('feed');
-        feed.innerHTML = "";
-
-        postsData.forEach(p => {
-            const user = userDataCache[p.uid] || {};
-            const name = user.username || p.u || "အမည်မသိ";
-            const avatar = user.profilePic || "👤";
-
-            let repliesHTML = "";
-            if (p.replies) {
-                Object.values(p.replies).forEach(r => {
-                    const rUser = userDataCache[r.uid] || {};
-                    repliesHTML += `
-                        <div style="margin-top:5px;">
-                            <span>${rUser.profilePic || '👤'}</span>
-                            <a href="profile.html?id=${r.uid}" style="color:#00ff41; text-decoration:none;">@${rUser.username || r.u}:</a> ${r.m}
-                        </div>`;
-                });
-            }
-
-            const card = document.createElement('div');
-            card.className = "card";
-            card.innerHTML = `
-                <div class="user">
-                    <div class="avatar">${avatar}</div>
-                    <a href="profile.html?id=${p.uid}">@${name}</a>
-                </div>
-                <div style="color:#fff; font-weight:bold;">${p.t}</div>
-                <p>${p.c}</p>
-                <div style="font-size:12px; color:#00ff41; cursor:pointer;" onclick="reply('${p.key}')">💬 Reply</div>
-                <div class="reply-box">${repliesHTML}</div>
-            `;
-            feed.appendChild(card);
-        });
-    }
 
     async function post() {
         const t = document.getElementById('t').value, c = document.getElementById('c').value;
         const user = firebase.auth().currentUser;
         if(t && c && user) {
-            db.ref("posts").push({ u: user.email.split('@')[0], uid: user.uid, t: t, c: c, time: Date.now() });
+            db.ref("posts").push({ u: currentUsername, uid: user.uid, avatar: currentUserAvatar, t: t, c: c, time: Date.now(), likes: 0 });
             document.getElementById('t').value = ""; document.getElementById('c').value = "";
         }
     }
 
     function reply(id) {
-        const m = prompt("Reply ပြန်မေ -");
+        const m = prompt("ပြောကြည့်ဇမ် -");
         const user = firebase.auth().currentUser;
         if(m && user) {
-            db.ref(`posts/${id}/replies`).push({ u: user.email.split('@')[0], uid: user.uid, m: m });
+            db.ref(`posts/${id}/replies`).push({ u: currentUsername, uid: user.uid, avatar: currentUserAvatar, m: m });
         }
     }
 
-    firebase.auth().onAuthStateChanged(user => {
-        if (!user) window.location.href = "index.html";
-        else document.getElementById('user-display').innerText = user.email;
-    });
+    function like(id) { db.ref(`posts/${id}/likes`).transaction(c => (c || 0) + 1); }
 
-    function logout() { if(confirm("ထွက်ဖို့ယာလား?")) firebase.auth().signOut(); }
+    function load() {
+        // Users အားလုံးကို တစ်ခါတည်း ယူပြီး Cache လုပ်မယ်
+        db.ref('users').on('value', uSnap => {
+            const allUsers = uSnap.val() || {};
+            
+            db.ref("posts").on("value", pSnap => {
+                const feed = document.getElementById('feed'); feed.innerHTML = "";
+                let items = [];
+                pSnap.forEach(child => { items.push({ key: child.key, ...child.val() }); });
+                
+                if (currentTab === 'latest') items.reverse();
+                else items.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+
+                items.forEach(p => {
+                    const postUser = allUsers[p.uid] || {};
+                    let repliesHTML = "";
+                    if (p.replies) {
+                        Object.values(p.replies).forEach(r => {
+                            const rUser = allUsers[r.uid] || {};
+                            repliesHTML += `
+                                <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+                                    <span>${rUser.profilePic || r.avatar || '👤'}</span> 
+                                    <a href="profile.html?id=${r.uid}" style="color:#00ff41; text-decoration:none; font-weight:bold;">@${rUser.username || r.u}:</a> 
+                                    <span>${r.m}</span>
+                                </div>`;
+                        });
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = "card";
+                    card.innerHTML = `
+                        <div class="user">
+                            <div class="avatar">${postUser.profilePic || p.avatar || '👤'}</div>
+                            <a href="profile.html?id=${p.uid}">@${postUser.username || p.u}</a>
+                        </div>
+                        <div class="title">${p.t}</div>
+                        <p style="font-size:14px;">${p.c}</p>
+                        <div class="action-bar">
+                            <span style="color:#00ff41; cursor:pointer;" onclick="like('${p.key}')">❤️ Like (${p.likes || 0})</span>
+                            <span style="cursor:pointer; color:#888;" onclick="reply('${p.key}')">💬 Reply</span>
+                        </div>
+                        <div class="reply-box">${repliesHTML}</div>`;
+                    feed.appendChild(card);
+                });
+            });
+        });
+    }
+
+    function trackPresence(user) {
+        const onlineRef = db.ref('online/' + user.uid);
+        onlineRef.set(true); onlineRef.onDisconnect().remove();
+        db.ref('online').on('value', s => { document.getElementById('online-count').innerText = s.numChildren(); });
+        db.ref('users').on('value', s => { document.getElementById('total-count').innerText = s.numChildren(); });
+    }
+
+    function switchTab(t) {
+        currentTab = t;
+        document.getElementById('tab-latest').classList.toggle('active', t==='latest');
+        document.getElementById('tab-popular').classList.toggle('active', t==='popular');
+        load();
+    }
+
+    function logout() { 
+        if (confirm("လားပါဖို့ယာလား?(အားကေလာလည်ပါ)")) {
+            firebase.auth().signOut().then(() => window.location.href = "index.html");
+        } 
+    }
 </script>
 </body>
 </html>
