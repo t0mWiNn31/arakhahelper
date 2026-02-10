@@ -6,20 +6,26 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
     <style>
         body { background: #0a0a0a; color: #333; font-family: sans-serif; margin: 0; padding: 10px; }
-        .profile-card { max-width: 450px; margin: 20px auto; background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,255,65,0.3); text-align: center; }
-        .profile-img { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 4px solid #00ff41; margin-bottom: 10px; background: #eee; }
-        .info-table { text-align: left; margin-top: 20px; width: 100%; border-collapse: collapse; }
-        .info-table td { padding: 10px; border-bottom: 1px solid #eee; }
-        .bio-box { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-top: 15px; font-style: italic; text-align: left; min-height: 50px; }
+        .profile-card { max-width: 400px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 20px; text-align: center; border: 3px solid #00ff41; }
         
-        /* Form Styling */
+        /* Emoji Avatar Style */
+        .avatar-display { font-size: 80px; background: #f0f0f0; width: 120px; height: 120px; line-height: 120px; border-radius: 50%; margin: 0 auto 15px; border: 4px solid #eee; }
+        
+        .info-table { text-align: left; width: 100%; margin-top: 15px; border-collapse: collapse; }
+        .info-table td { padding: 12px; border-bottom: 1px solid #eee; }
+        
+        /* Emoji Picker */
+        .emoji-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 15px 0; background: #f9f9f9; padding: 10px; border-radius: 10px; }
+        .emoji-item { font-size: 30px; cursor: pointer; padding: 5px; border-radius: 8px; transition: 0.2s; border: 2px solid transparent; }
+        .emoji-item:hover { background: #e0e0e0; }
+        .emoji-item.selected { border-color: #00ff41; background: #e8f5e9; }
+
         #edit-section { display: none; margin-top: 20px; border-top: 2px dashed #00ff41; padding-top: 20px; text-align: left; }
-        input, select, textarea { width: 100%; padding: 10px; margin: 5px 0 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; background: #fff; }
-        .btn { padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
+        input, select, textarea { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         .btn-edit { background: #00ff41; color: #000; }
         .btn-save { background: #007bff; color: #fff; }
         .btn-back { background: #666; color: #fff; }
@@ -28,8 +34,8 @@
 <body>
 
 <div class="profile-card">
-    <img id="p-img" src="https://cdn-icons-png.flaticon.com/512/149/149071.png" class="profile-img">
-    <h2 id="p-name">Loading...</h2>
+    <div id="p-img" class="avatar-display">👤</div>
+    <h2 id="p-name" style="margin: 10px 0;">Loading...</h2>
     
     <table class="info-table">
         <tr><td><b>အသက်</b></td><td id="p-age">--</td></tr>
@@ -37,22 +43,23 @@
         <tr><td><b>မွေးနေ့</b></td><td id="p-dob">--</td></tr>
     </table>
 
-    <div class="bio-box">
-        <h4 style="margin:0 0 5px 0;">စာတိုလေး (Bio)</h4>
-        <p id="p-bio" style="margin:0;">...</p>
+    <div style="background:#f9f9f9; padding:15px; border-radius:10px; margin-top:15px; text-align:left;">
+        <h4 style="margin:0 0 5px 0;">စတိုလေး (Bio)</h4>
+        <p id="p-bio" style="margin:0; font-style:italic;">...</p>
     </div>
 
     <button id="edit-btn" class="btn btn-edit" style="display:none;" onclick="toggleEdit()">ပြင်ဆင်မေ</button>
     <button class="btn btn-back" onclick="window.history.back()">ပြန်လားမေ</button>
 
     <div id="edit-section">
-        <h3 style="color:#007bff;">အချက်အလက်ပြင်မေ</h3>
+        <h3 style="color:#007bff; margin-top:0;">အချက်အလက်ပြင်မေ</h3>
         
         <label>နာမည်:</label>
         <input type="text" id="input-name">
 
-        <label>ပရိုဖိုင်ပုံ ရွေးပါ:</label>
-        <input type="file" id="input-file" accept="image/*">
+        <label>Emoji ရွေးပါ:</label>
+        <div class="emoji-grid" id="emoji-picker">
+            </div>
 
         <label>အသက်:</label>
         <input type="number" id="input-age">
@@ -75,23 +82,38 @@
 </div>
 
 <script>
-    // ကိုကို့ Firebase Config (မူရင်းအတိုင်း)
     const config = {
         apiKey: "AIzaSyCpIv3avDNRYNrmrzKdMqfnMdNzBGZAPow",
         authDomain: "firstarakha.firebaseapp.com",
         projectId: "firstarakha",
         databaseURL: "https://firstarakha-default-rtdb.asia-southeast1.firebasedatabase.app",
-        storageBucket: "firstarakha.appspot.com", // Storage အတွက် ဒါလေးပါဖို့လိုတယ်
         appId: "1:4263070909:web:ef4e4a2c0891be1f49bbd4"
     };
     firebase.initializeApp(config);
     const db = firebase.database();
-    const storage = firebase.storage();
 
     const params = new URLSearchParams(window.location.search);
     const profileId = params.get('id');
+    let selectedEmoji = "👤";
 
-    // ၁။ ဒေတာများကို Firebase မှ ဆွဲထုတ်ခြင်း
+    // Emoji စာရင်း
+    const emojis = ["👤", "👨‍💻", "👩‍💻", "🥷", "🦁", "🐯", "🐱", "🦊", "👑", "🍀", "🔥", "✨"];
+    const picker = document.getElementById('emoji-picker');
+    
+    emojis.forEach(e => {
+        const span = document.createElement('span');
+        span.className = 'emoji-item';
+        span.innerText = e;
+        span.onclick = () => selectEmoji(e, span);
+        picker.appendChild(span);
+    });
+
+    function selectEmoji(emoji, el) {
+        selectedEmoji = emoji;
+        document.querySelectorAll('.emoji-item').forEach(i => i.classList.remove('selected'));
+        el.classList.add('selected');
+    }
+
     if (profileId) {
         db.ref('users/' + profileId).on('value', s => {
             const data = s.val();
@@ -101,19 +123,18 @@
                 document.getElementById('p-gender').innerText = data.gender || "--";
                 document.getElementById('p-dob').innerText = data.dob || "--";
                 document.getElementById('p-bio').innerText = data.bio || "ဘာမှမရေးထားပါဘူး။";
-                document.getElementById('p-img').src = data.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
-                // Input တွေထဲကိုပါ ဒေတာ ကြိုဖြည့်ပေးခြင်း
+                document.getElementById('p-img').innerText = data.profilePic || "👤";
+                
                 document.getElementById('input-name').value = data.username || "";
                 document.getElementById('input-age').value = data.age || "";
                 document.getElementById('input-gender').value = data.gender || "ကျား";
                 document.getElementById('input-dob').value = data.dob || "";
                 document.getElementById('input-bio').value = data.bio || "";
+                selectedEmoji = data.profilePic || "👤";
             }
         });
     }
 
-    // ၂။ ပရိုဖိုင်ပိုင်ရှင် ဟုတ်မဟုတ် စစ်ဆေးခြင်း
     firebase.auth().onAuthStateChanged(user => {
         if (user && user.uid === profileId) {
             document.getElementById('edit-btn').style.display = 'block';
@@ -125,53 +146,25 @@
         x.style.display = (x.style.display === 'none') ? 'block' : 'none';
     }
 
-    // ၃။ ပရိုဖိုင် သိမ်းဆည်းခြင်း (Upload ရော Update ရောပါဝင်သည်)
     async function saveProfile() {
         const user = firebase.auth().currentUser;
-        const file = document.getElementById('input-file').files[0];
-        const saveBtn = document.getElementById('save-btn');
-
         if (!user || user.uid !== profileId) return;
 
-        saveBtn.innerText = "သိမ်းနီပါရေ... (ခဏစောင့်ပါ)";
-        saveBtn.disabled = true;
-
-        let photoURL = document.getElementById('p-img').src;
+        const updatedData = {
+            username: document.getElementById('input-name').value,
+            profilePic: selectedEmoji, // Emoji ကို သိမ်းမယ်
+            age: document.getElementById('input-age').value,
+            gender: document.getElementById('input-gender').value,
+            dob: document.getElementById('input-dob').value,
+            bio: document.getElementById('input-bio').value
+        };
 
         try {
-            // ပုံအသစ်ရွေးထားရင် Storage ထဲ အရင်တင်မယ်
-            if (file) {
-                const storageRef = storage.ref('profile_pics/' + user.uid);
-                await storageRef.put(file);
-                photoURL = await storageRef.getDownloadURL();
-            }
-
-            const updatedData = {
-                username: document.getElementById('input-name').value,
-                profilePic: photoURL,
-                age: document.getElementById('input-age').value,
-                gender: document.getElementById('input-gender').value,
-                dob: document.getElementById('input-dob').value,
-                bio: document.getElementById('input-bio').value
-            };
-
-            // Database ကို Update လုပ်မယ်
             await db.ref('users/' + user.uid).update(updatedData);
-
-            // Auth Profile (displayName) ကိုပါ Update လုပ်မယ်
-            await user.updateProfile({ 
-                displayName: updatedData.username,
-                photoURL: photoURL 
-            });
-
-            alert("အောင်မြင်စွာ ပြင်ဆင်ပြီးပါယာ!");
+            alert("သိမ်းပြီးပါပြီ ကိုကို!");
             toggleEdit();
-            saveBtn.disabled = false;
-            saveBtn.innerText = "သိမ်းဆည်းမေ";
         } catch (e) {
             alert("Error: " + e.message);
-            saveBtn.disabled = false;
-            saveBtn.innerText = "သိမ်းဆည်းမေ";
         }
     }
 </script>
