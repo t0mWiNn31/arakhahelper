@@ -13,11 +13,39 @@
         body { background: #000; color: #ccc; font-family: sans-serif; margin: 0; overflow-x: hidden; }
         
         /* Glassmorphism Navigation */
-        .nav { background: rgba(17, 17, 17, 0.9); backdrop-filter: blur(10px); padding: 10px 15px; border-bottom: 1px solid #00ff41; position: sticky; top: 0; z-index: 100; }
-        .nav-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .nav-tabs { display: flex; gap: 20px; border-top: 1px solid #222; padding-top: 8px; }
-        .tab { font-size: 13px; color: #888; cursor: pointer; padding: 5px 0; border-bottom: 2px solid transparent; }
-        .tab.active { color: #00ff41; border-bottom: 2px solid #00ff41; }
+        /* Navigation ပိုင်းကို ဖုန်းအတွက်ပါ ညှိထားတဲ့ CSS */
+.nav { 
+    background: rgba(17, 17, 17, 0.9); 
+    backdrop-filter: blur(10px); 
+    padding: 10px; 
+    border-bottom: 1px solid #00ff41; 
+    position: sticky; top: 0; z-index: 100; 
+}
+.nav-top { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px; 
+}
+.nav-right {
+    display: flex; 
+    flex-direction: column; 
+    align-items: flex-end; 
+    gap: 5px;
+}
+.nav-tabs { display: flex; gap: 15px; border-top: 1px solid #222; padding-top: 8px; }
+.tab { font-size: 12px; color: #888; cursor: pointer; padding: 5px 0; }
+.tab.active { color: #00ff41; border-bottom: 2px solid #00ff41; }
+
+/* ဖုန်းအတွက် သီးသန့် (Mobile Fix) */
+@media (max-width: 480px) {
+    b { font-size: 13px; }
+    #user-display { font-size: 10px; }
+    .nav-tabs { gap: 10px; }
+    .tab { font-size: 11px; }
+    button { padding: 4px 8px !important; font-size: 9px !important; }
+}
+      
 
         .container { max-width: 700px; margin: 20px auto; padding: 10px; position: relative; z-index: 1; }
         
@@ -41,25 +69,26 @@
 
 <div class="nav">
     <div class="nav-top">
-        <div>
-            <b style="color:#00ff41">ARAKHA_FORUM</b>
-            <div style="font-size: 10px; color: #888;">
-                ONLINE: <span id="online-count">0</span> | TOTAL: <span id="total-count">0</span>
+        <div style="flex: 1;">
+            <b style="color:#00ff41; display: block; line-height: 1;">ARAKHA_FORUM</b>
+            <div style="font-size: 9px; color: #666; margin-top: 3px;">
+                ON: <span id="online-count">0</span> | TOT: <span id="total-count">0</span>
             </div>
         </div>
 
-        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
-            <div id="user-display" style="font-size: 11px; color: #00ff41; font-weight: bold;"></div>
-            <div style="display: flex; gap: 8px;">
-                <button onclick="goToProfile()" style="background:transparent; border:1px solid #00ff41; color:#00ff41; padding:5px 10px; font-size: 10px; cursor: pointer; border-radius: 4px;">မိမိပရိုဖိုင်</button>
-                <button onclick="logout()" style="background:#ff4444; color:#fff; border:none; padding:5px 10px; font-size: 10px; cursor: pointer; border-radius: 4px;">LOGOUT</button>
+        <div class="nav-right">
+            <div id="user-display" style="color: #00ff41; font-weight: bold; font-size: 11px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                </div>
+            <div style="display: flex; gap: 5px;">
+                <button onclick="goToProfile()" style="background:transparent; border:1px solid #00ff41; color:#00ff41; padding:5px 10px; cursor: pointer; border-radius: 4px;">PROFILE</button>
+                <button onclick="logout()" style="background:#ff4444; color:#fff; border:none; padding:5px 10px; cursor: pointer; border-radius: 4px;">LOGOUT</button>
             </div>
         </div>
     </div>
 
     <div class="nav-tabs">
         <div class="tab active" id="tab-latest" onclick="switchTab('latest')">နောက်ဆုံးတင်ခစာ</div>
-        <div class="tab" id="tab-popular" onclick="switchTab('popular')">နာမည်ကြီး (Popular)</div>
+        <div class="tab" id="tab-popular" onclick="switchTab('popular')">နာမည်ကြီး</div>
     </div>
 </div>
 <div class="container">
