@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arakha Terminal - Messages</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        body { background: #050505; color: #00ff41; font-family: 'Courier New', monospace; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; }
+        h2 { border-bottom: 2px solid #00ff41; padding-bottom: 10px; font-size: 18px; }
+        
+        .user-card { 
+            background: #111; 
+            padding: 12px; 
+            margin-bottom: 10px; 
+            border: 1px solid #333; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .user-card:hover { border-color: #00ff41; background: #1a1a1a; }
+        
+        .avatar { width: 45px; height: 45px; border-radius: 50%; border: 1px solid #00ff41; object-fit: cover; }
+        .info { flex: 1; }
+        .name { font-weight: bold; font-size: 15px; }
+        .last-msg { font-size: 11px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+        
+        .status-dot { width: 10px; height: 10px; background: #333; border-radius: 50%; }
+        .online { background: #00ff41; box-shadow: 0 0 8px #00ff41; }
+        .notify-badge { background: red; color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; }
+        
+        .section-title { font-size: 12px; color: #888; margin: 20px 0 10px; text-transform: uppercase; }
+        .back-btn { color: #00ff41; text-decoration: none; font-size: 13px; display: block; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="forum.html" class="back-btn">< BACK TO FORUM</a>
+    
+    <h2>TERMINAL_MESSAGES</h2>
+
+    <div class="section-title">Online Users (Direct DM)</div>
+    <div id="online-list">Loading users...</div>
+
+    <div class="section-title">Recent Conversations</div>
+    <div id="chat-history">No recent chats.</div>
+</div>
+
+<script>
+    const config = {
+        apiKey: "AIzaSyCpIv3avDNRYNrmrzKdMqfnMdNzBGZAPow",
+        authDomain: "firstarakha.firebaseapp.com",
+        projectId: "firstarakha",
+        databaseURL: "https://firstarakha-default-rtdb.asia-southeast1.firebasedatabase.app", 
+        appId: "1:4263070909:web:ef4e4a2c0891be1f49bbd4"
+    };
+    firebase.initializeApp(config);
+    const db = firebase.database();
+
+    firebase.auth().onAuthStateChanged(user => {
+        if (!user) window.location.href = "index.html";
+        else {
+            loadOnlineUsers(user.uid);
+            loadChatHistory(user.uid);
+        }
+    });
+
+    // ၁။ Online ရှိနေသူအားလုံးကို ပြပေးမယ်
+    function loadOnlineUsers(myId) {
+        db.ref('users').on('value', snap => {
+            const users = snap.val();
+            const listDiv = document.getElementById('online-list');
+            listDiv.innerHTML = "";
+            
+            for (let id in users) {
+                if (id === myId) continue; // ကိုယ့်ကိုယ်ကို ပြန်မပြဘူး
+                const u = users[id];
+                if (u.isOnline) {
+                    listDiv.innerHTML += `
+                        <div class="user-card" onclick="location.href='chat.html?id=${id}'">
+                            <img src="${u.profilePic || 'https://via.placeholder.com/50'}" class="avatar">
+                            <div class="info">
+                                <div class="name">${u.username}</div>
+                                <div style="font-size:10px; color:#00ff41;">ACTIVE_NOW</div>
+                            </div>
+                            <div class="status-dot online"></div>
+                        </div>
+                    `;
+                }
+            }
+            if (listDiv.innerHTML === "") listDiv.innerHTML = "<div style='font-size:12px; opacity:0.5;'>No users online.</div>";
+        });
+    }
+
+    // ၂။ စကားပြောဖူးတဲ့ လူစာရင်းကို ပြမယ်
+    function loadChatHistory(myId) {
+        db.ref('dms').on('value', snap => {
+            const rooms = snap.val();
+            const historyDiv = document.getElementById('chat-history');
+            historyDiv.innerHTML = "";
+            
+            for (let roomId in rooms) {
+                if (roomId.includes(myId)) {
+                    const targetId = roomId.replace(myId, "").replace("_", "");
+                    const messages = Object.values(rooms[roomId]);
+                    const lastMsg = messages[messages.length - 1];
+
+                    // တစ်ဖက်လူ နာမည်သွားယူမယ်
+                    db.ref('users/' + targetId).once('value', uSnap => {
+                        const u = uSnap.val();
+                        const isNew = lastMsg.sender !== myId;
+
+                        const html = `
+                            <div class="user-card" onclick="location.href='chat.html?id=${targetId}'">
+                                <img src="${u.profilePic || 'https://via.placeholder.com/50'}" class="avatar">
+                                <div class="info">
+                                    <div class="name">${u.username}</div>
+                                    <div class="last-msg">${lastMsg.text}</div>
+                                </div>
+                                ${isNew ? '<span class="notify-badge">NEW</span>' : ''}
+                            </div>
+                        `;
+                        historyDiv.innerHTML += html;
+                    });
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
