@@ -9,19 +9,25 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
         #matrix-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
-        body { background: #000; color: #ccc; font-family: sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        body { background: #000; color: #ccc; font-family: sans-serif; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px 0; }
         
-        .profile-card { background: rgba(17, 17, 17, 0.9); border: 1px solid #00ff41; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; backdrop-filter: blur(10px); }
+        .profile-card { background: rgba(17, 17, 17, 0.9); border: 1px solid #00ff41; padding: 25px; border-radius: 12px; width: 90%; max-width: 420px; text-align: center; backdrop-filter: blur(10px); box-shadow: 0 0 15px rgba(0, 255, 65, 0.2); }
         
-        /* Avatar Logic Styling */
-        .avatar-container { position: relative; width: 100px; height: 100px; margin: 0 auto 20px; }
+        .avatar-container { position: relative; width: 100px; height: 100px; margin: 0 auto 15px; }
         .avatar-display { width: 100px; height: 100px; border-radius: 50%; border: 2px solid #00ff41; display: flex; align-items: center; justify-content: center; background: #111; font-size: 50px; overflow: hidden; object-fit: cover; }
         
-        .upload-icon { position: absolute; bottom: 0; right: 0; background: #00ff41; color: #000; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; border: 2px solid #000; }
+        .upload-icon { position: absolute; bottom: 0; right: 0; background: #00ff41; color: #000; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; border: 2px solid #000; }
 
-        input, textarea { width: 100%; background: #000; border: 1px solid #444; color: #00ff41; padding: 10px; margin-top: 10px; border-radius: 4px; outline: none; box-sizing: border-box; }
-        button { width: 100%; background: #00ff41; color: #000; border: none; padding: 12px; margin-top: 15px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .input-group { text-align: left; margin-top: 15px; }
+        label { font-size: 12px; color: #00ff41; margin-left: 5px; }
+        
+        input, textarea, select { width: 100%; background: #000; border: 1px solid #444; color: #00ff41; padding: 10px; margin-top: 5px; border-radius: 4px; outline: none; box-sizing: border-box; font-size: 14px; }
+        
+        button { width: 100%; background: #00ff41; color: #000; border: none; padding: 12px; margin-top: 20px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #00cc33; }
         .back-btn { background: transparent; color: #00ff41; border: 1px solid #00ff41; margin-top: 10px; }
+        
+        #status { font-size: 11px; margin-top: 15px; color: #00ff41; min-height: 15px; }
     </style>
 </head>
 <body>
@@ -31,23 +37,52 @@
 <div class="profile-card">
     <div class="avatar-container">
         <div id="avatar-view" class="avatar-display">👤</div>
-        <label for="img-input" class="upload-icon">📷</label>
+        <label for="img-input" class="upload-icon" title="Upload Photo">📷</label>
         <input type="file" id="img-input" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
     </div>
 
-    <h3 id="display-name" style="color:#00ff41; margin: 10px 0;">User_Name</h3>
-    <p id="user-email" style="font-size: 12px; color: #666;"></p>
+    <h3 id="display-name" style="color:#00ff41; margin: 0;">User_Name</h3>
+    <p id="user-email" style="font-size: 11px; color: #666; margin: 5px 0 15px 0;"></p>
 
-    <input type="text" id="username" placeholder="နာမေသစ် ပြောင်းမေ">
-    <textarea id="bio" rows="2" placeholder="ကိုယ့်အကြောင်း စကေတပွေ..."></textarea>
+    <div class="input-group">
+        <label>နာမေ</label>
+        <input type="text" id="username" placeholder="နာမေအသစ်...">
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+        <div class="input-group" style="flex: 1;">
+            <label>အသက်</label>
+            <input type="number" id="age" placeholder="အသက်">
+        </div>
+        <div class="input-group" style="flex: 1;">
+            <label>လိင်</label>
+            <select id="gender">
+                <option value="မရွေးရသေး">ရွီးပါ</option>
+                <option value="ကျား">ကျား</option>
+                <option value="မ">မ</option>
+                <option value="အခြား">အခြား</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label>မွီးသက္ကရာဇ်</label>
+        <input type="date" id="birthday">
+    </div>
+
+    <div class="input-group">
+        <label>ကိုယ်ရေးအကျဉ်း (Bio)</label>
+        <textarea id="bio" rows="2" placeholder="ကိုယ့်အကြောင်း..."></textarea>
+    </div>
     
-    <button onclick="saveProfile()" id="saveBtn">UPDATE_PROFILE</button>
-    <button class="back-btn" onclick="window.location.href='forum.html'">BACK_TO_FORUM</button>
-    <div id="status" style="font-size: 10px; margin-top: 10px; color: #00ff41;"></div>
+    <button onclick="saveProfile()" id="saveBtn">UPDATE PROFILE</button>
+    <button class="back-btn" onclick="window.location.href='forum.html'">BACK TO FORUM</button>
+    
+    <div id="status"></div>
 </div>
 
 <script>
-    // --- Firebase Config ---
+    // --- Firebase Setup ---
     const config = {
         apiKey: "AIzaSyCpIv3avDNRYNrmrzKdMqfnMdNzBGZAPow",
         authDomain: "firstarakha.firebaseapp.com",
@@ -58,7 +93,7 @@
     firebase.initializeApp(config);
     const db = firebase.database();
 
-    // Matrix Background
+    // Matrix BG
     const canvas = document.getElementById('matrix-canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -74,7 +109,7 @@
     }
     setInterval(draw, 50);
 
-    // --- User Data Load ---
+    // --- Data Loading ---
     firebase.auth().onAuthStateChanged(user => {
         if (!user) window.location.href = "index.html";
         else {
@@ -83,9 +118,11 @@
                 const data = s.val() || {};
                 document.getElementById('username').value = data.username || "";
                 document.getElementById('display-name').innerText = data.username || user.email.split('@')[0];
+                document.getElementById('age').value = data.age || "";
+                document.getElementById('gender').value = data.gender || "မရွီးချယ်ရသိ";
+                document.getElementById('birthday').value = data.birthday || "";
                 document.getElementById('bio').value = data.bio || "";
                 
-                // Avatar Priority: Link > Emoji > Default
                 const avatarView = document.getElementById('avatar-view');
                 if (data.profilePic && data.profilePic.startsWith('http')) {
                     avatarView.innerHTML = `<img src="${data.profilePic}" style="width:100%; height:100%; object-fit:cover;">`;
@@ -96,18 +133,16 @@
         }
     });
 
-    // --- ImgBB ပုံတင်တဲ့ Function ---
+    // --- Avatar Upload ---
     async function uploadAvatar(input) {
         if (!input.files || !input.files[0]) return;
-        
         const status = document.getElementById('status');
-        status.innerText = "ပုံတင်နိန်ပါရေ... တနားချေစောင့်ပါ";
+        status.innerText = "UPLOADING IMAGE...";
         
         const fd = new FormData();
         fd.append("image", input.files[0]);
 
         try {
-            // ImgBB API သုံးပြီး ပုံတင်ခြင်း
             const res = await fetch("https://api.imgbb.com/1/upload?key=926060156d59194f53e97f7cec5ff5a2", {
                 method: "POST",
                 body: fd
@@ -116,30 +151,36 @@
             if (resData.success) {
                 const imgUrl = resData.data.url;
                 const user = firebase.auth().currentUser;
-                // Database ထဲမှာ Profile ပုံ Link ကို Update လုပ်ခြင်း
                 await db.ref('users/' + user.uid).update({ profilePic: imgUrl });
-                status.innerText = "ပရိုဖိုင်ပုံ ပြောင်းပြီးပါယာ!";
+                status.innerText = "PHOTO UPDATED!";
+                setTimeout(() => status.innerText = "", 2000);
             }
         } catch (e) {
-            status.innerText = "ပုံတင်လို့ မရပါ (Error)!";
+            status.innerText = "UPLOAD FAILED!";
         }
     }
 
-    // --- အချက်အလက် သိမ်းခြင်း ---
+    // --- Save Profile ---
     function saveProfile() {
         const user = firebase.auth().currentUser;
-        const name = document.getElementById('username').value;
-        const bio = document.getElementById('bio').value;
         const btn = document.getElementById('saveBtn');
+        const status = document.getElementById('status');
+
+        const updates = {
+            username: document.getElementById('username').value,
+            age: document.getElementById('age').value,
+            gender: document.getElementById('gender').value,
+            birthday: document.getElementById('birthday').value,
+            bio: document.getElementById('bio').value
+        };
 
         btn.disabled = true;
-        db.ref('users/' + user.uid).update({
-            username: name,
-            bio: bio
-        }).then(() => {
+        status.innerText = "SAVING...";
+
+        db.ref('users/' + user.uid).update(updates).then(() => {
             btn.disabled = false;
-            document.getElementById('status').innerText = "သိမ်းဆည်းပြီးပါယာ!";
-            setTimeout(() => document.getElementById('status').innerText = "", 2000);
+            status.innerText = "PROFILE UPDATED SUCCESSFULLY!";
+            setTimeout(() => status.innerText = "", 2000);
         });
     }
 </script>
